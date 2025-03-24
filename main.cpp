@@ -276,37 +276,6 @@ QVector<QPair<QString, double>> calculateMovingAverage(const QVector<StockRecord
     return movingAverages;
 }
 
-// Fonction pour exporter les données vers un nouveau fichier CSV pas obligatoire ca rne sert pas a grnad chose
-bool exportToCSV(const QVector<StockRecord>& records, const QString& filePath) {
-    QFile file(filePath);
-
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        qWarning() << "Erreur lors de l'ouverture du fichier pour l'écriture:" << filePath;
-        return false;
-    }
-
-    QTextStream out(&file);
-
-    // Écrire l'en-tête
-    out << "Date,Open,High,Low,Close,Adj Close,Volume,Source\n";
-
-    // Écrire les données
-    for (const auto& record : records) {
-        out << record.date << ","
-            << record.open << ","
-            << record.high << ","
-            << record.low << ","
-            << record.close << ","
-            << record.adjClose << ","
-            << record.volume << ","
-            << record.sourceTable << "\n";
-    }
-
-    file.close();
-    qInfo() << "Données exportées avec succès vers" << filePath;
-    return true;
-}
-
 int main(int argc, char *argv[]) {
     QCoreApplication a(argc, argv);
 
@@ -367,9 +336,6 @@ int main(int argc, char *argv[]) {
     qInfo() << "\n--- Moyennes mobiles ---";
     qInfo() << "Calculé" << ma50.size() << "points de moyenne mobile sur 50 jours";
     qInfo() << "Calculé" << ma200.size() << "points de moyenne mobile sur 200 jours";
-
-    // Exporter les données
-    exportToCSV(records, "C:/Users/senec/Desktop/datasheet/ml/build/apple_stock_db_export.csv");
 
     // En mode QCoreApplication, l'application ne se termine pas automatiquement
     // On peut donc ajouter une ligne pour la quitter manuellement
