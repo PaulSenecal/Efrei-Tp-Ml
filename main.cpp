@@ -1,18 +1,20 @@
 #include <QCoreApplication>
-#include <QFile>
-#include <QDir>
-#include <QTextStream>
 #include <QDebug>
 #include <QVector>
 #include <QStringList>
 #include <QDateTime>
-#include <QFileInfo>
 #include <QMap>
 #include <QPair>
 #include <cmath>
 #include <algorithm>
+#include <QSqlDatabase>
+#include <QSqlQuery>
+#include <QSqlError>
+#include <QSqlRecord>
+#include <QDir>
+#include <QFileInfo>
 
-// Structure pour stocker les données d'une action
+// Structure pour stocker de bourse
 struct StockRecord {
     QString date;
     double open;
@@ -21,106 +23,157 @@ struct StockRecord {
     double close;
     double adjClose;
     qint64 volume;
-    QString sourceFile;
+    QString sourceTable;
 };
 
-// Analyse un fichier CSV return vecteur de StockRecord
-QVector<StockRecord> parseCSVFile(const QString& filePath) {
+QVector<StockRecord> loadFromDatabase() {
     QVector<StockRecord> records;
-    QFile file(filePath);
 
-    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        qWarning() << "Erreur lors de l'ouverture du fichier:" << filePath;
+    // Vérifier si le fichier de base de données existe
+    QString dbPath = "C:/Users/senec/Desktop/datasheet/ml/Database/test.db";
+    QFileInfo dbFile(dbPath);
+
+    if (!dbFile.exists()) {
+        qWarning() << "Fichier de base de données introuvable:" << dbPath;
+        qWarning() << "Chemin absolu:" << dbFile.absoluteFilePath();
+        qWarning() << "Répertoire courant:" << QDir::currentPath();
         return records;
     }
 
-    QTextStream in(&file);
+    QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE");
+    db.setDatabaseName(dbPath);
 
-    if (!in.atEnd()) {
-        in.readLine();
+    if (!db.open()) {
+        qWarning() << "Erreur lors de l'ouverture de la base de données:" << db.lastError().text();
+        return records;
     }
 
-    while (!in.atEnd()) {
-        QString line = in.readLine();
-        QStringList fields = line.split(',');
+    qInfo() << "Connexion à la base de données établie.";
 
-        if (fields.size() >= 7) {
-            StockRecord record;
-            record.sourceFile = QFileInfo(filePath).fileName();
+    QStringList tables = db.tables();
+    qInfo() << "Tables disponibles dans la base de données:" << tables.join(", ");
 
-            // Date
-            record.date = fields[0];
 
-            // Open
-            record.open = fields[1].toDouble();
+    QString tableName = "\"AAPL_1980-12-03_2025-03-15\"";
 
-            // High
-            record.high = fields[2].toDouble();
 
-            // Low
-            record.low = fields[3].toDouble();
+    QSqlQuery structureQuery;
+    structureQuery.prepare("PRAGMA table_info(" + tableName + ")");
 
-            // Close
-            record.close = fields[4].toDouble();
+    if (structureQuery.exec()) {
+        qInfo() << "Structure de la table:";
+        while (structureQuery.next()) {
+            QString columnName = structureQuery.value(1).toString();
+            QString columnType = structureQuery.value(2).toString();
+            qInfo() << "- Colonne:" << columnName << "Type:" << columnType;
+        }
+    } else {
+        qWarning() << "Impossible d'obtenir la structure de la table:" << structureQuery.lastError().text();
+    }
 
-            // Adj Close
-            record.adjClose = fields[5].toDouble();
 
-            // Volume
-            record.volume = fields[6].toLongLong();
+    QSqlQuery testQuery;
+    testQuery.prepare("SELECT * FROM " + tableName + " LIMIT 1");
 
-            records.append(record);
+    if (!testQuery.exec()) {
+        qWarning() << "Erreur lors du test d'accès à la table:" << testQuery.lastError().text();
+
+        tableName = "AAPL_1980-12-03_2025-03-15";
+        testQuery.prepare("SELECT * FROM " + tableName + " LIMIT 1");
+
+        if (!testQuery.exec()) {
+            qWarning() << "Deuxième tentative échouée:" << testQuery.lastError().text();
+            db.close();
+            return records;
+        } else {
+            qInfo() << "Deuxième tentative réussie avec le nom de table sans guillemets.";
         }
     }
 
-    file.close();
-    qInfo() << "Chargé" << records.size() << "enregistrements depuis" << filePath;
+    // Obtenir les noms des colonnes
+    QSqlRecord rec = testQuery.record();
+    QStringList columnNames;
+
+    for (int i = 0; i < rec.count(); i++) {
+        columnNames << rec.fieldName(i);
+    }
+
+    qInfo() << "Noms des colonnes:" << columnNames.join(", ");
+
+    // Requête SQL pour récupérer toutes les données (avec les noms de colonnes corrects)
+    QSqlQuery query;
+
+    if (!columnNames.isEmpty()) {
+        query.prepare("SELECT * FROM " + tableName);
+    } else {
+        query.prepare("SELECT field1, field2, field3, field4, field5, field6, field7 FROM " + tableName);
+    }
+
+    if (!query.exec()) {
+        qWarning() << "Erreur lors de l'exécution de la requête:" << query.lastError().text();
+        db.close();
+        return records;
+    }
+
+    // Traiter les résultats
+    int count = 0;
+    while (query.next()) {
+        StockRecord record;
+
+        if (!columnNames.isEmpty()) {
+            // Supposons que les colonnes sont date, open, high, low, close, adj_close, volume dans cet ordre
+            record.date = query.value(0).toString();
+            record.open = query.value(1).toDouble();
+            record.high = query.value(2).toDouble();
+            record.low = query.value(3).toDouble();
+            record.close = query.value(4).toDouble();
+            record.adjClose = query.value(5).toDouble();
+            record.volume = query.value(6).toLongLong();
+        } else {
+            // Mapping des champs field1-field7 vers les propriétés
+            record.date = query.value(0).toString();
+            record.open = query.value(1).toDouble();
+            record.high = query.value(2).toDouble();
+            record.low = query.value(3).toDouble();
+            record.close = query.value(4).toDouble();
+            record.adjClose = query.value(5).toDouble();
+            record.volume = query.value(6).toLongLong();
+        }
+
+        record.sourceTable = tableName;
+        records.append(record);
+        count++;
+    }
+
+    qInfo() << "Chargé" << count << "enregistrements depuis la table" << tableName;
+    db.close();
+
     return records;
 }
 
-QVector<StockRecord> loadLocalCSVFiles() {
-    QVector<StockRecord> allRecords;
-    QStringList fileList;
-
-    QDir dir("C:/Users/senec/Desktop/datasheet/ml/dataset");
-    if (!dir.exists()) {
-        dir = QDir(".");
-    }
-
-    // Obtenir tous les fichiers CSV commençant par "AAPL_"
-    QStringList filters;
-    filters << "AAPL_*.csv";//AAPL_1980-12-03_2025-02-07.csv
-    // filters << "AAPL_1980-12-03_2025-02-07.csv";
-    dir.setNameFilters(filters);
-
-    QFileInfoList files = dir.entryInfoList(QDir::Files);
-    for (const QFileInfo& fileInfo : files) {
-        fileList << fileInfo.filePath();
-    }
-
-    // Analyser chaque fichier moyen en qt
-    for (const QString& file : fileList) {
-        QVector<StockRecord> records = parseCSVFile(file);
-        allRecords.append(records);
-    }
-
-    return allRecords;
-}
-
-// Fonction pour calculer des statistiques sur les données d'actions
-void calculateStatistics(const QVector<StockRecord>& records) {
+// Fonction pour calculer et afficher les principales statistiques
+void displayKeyStatistics(const QVector<StockRecord>& records) {
     if (records.isEmpty()) {
-        qWarning() << "Pas de données pour calculer les statistiques";
+        qWarning() << "Pas de données pour afficher les statistiques";
         return;
     }
 
-    // Valeurs pour les calculs
     double sumClose = 0.0;
     double sumVolume = 0.0;
     double minClose = records[0].close;
     double maxClose = records[0].close;
     QDateTime minDate = QDateTime::fromString(records[0].date, "yyyy-MM-dd");
     QDateTime maxDate = minDate;
+
+    if (!minDate.isValid()) {
+        minDate = QDateTime::fromString(records[0].date, "yyyy-MM-dd hh:mm:ss");
+    }
+
+    if (!minDate.isValid()) {
+        minDate = QDateTime::fromString(records[0].date, "MM/dd/yyyy");
+    }
+
+    maxDate = minDate;
 
     // Calculer les moyennes, min et max
     for (const auto& record : records) {
@@ -130,9 +183,21 @@ void calculateStatistics(const QVector<StockRecord>& records) {
         if (record.close < minClose) minClose = record.close;
         if (record.close > maxClose) maxClose = record.close;
 
+        // parser la date avec différents formats
         QDateTime date = QDateTime::fromString(record.date, "yyyy-MM-dd");
-        if (date < minDate) minDate = date;
-        if (date > maxDate) maxDate = date;
+
+        if (!date.isValid()) {
+            date = QDateTime::fromString(record.date, "yyyy-MM-dd hh:mm:ss");
+        }
+
+        if (!date.isValid()) {
+            date = QDateTime::fromString(record.date, "MM/dd/yyyy");
+        }
+
+        if (date.isValid()) {
+            if (minDate.isValid() && date < minDate) minDate = date;
+            if (maxDate.isValid() && date > maxDate) maxDate = date;
+        }
     }
 
     double avgClose = sumClose / records.size();
@@ -146,31 +211,39 @@ void calculateStatistics(const QVector<StockRecord>& records) {
     }
     double stdDev = sqrt(sumSquareDiff / records.size());
 
-    // Calculer la volatilité (pourcentage de variation quotidienne)
+    // Calculer rendements quotidiens + volatilité
     QVector<double> dailyReturns;
     for (int i = 1; i < records.size(); i++) {
         double prevClose = records[i-1].close;
         double currentClose = records[i].close;
-        double dailyReturn = (currentClose - prevClose) / prevClose * 100.0;
-        dailyReturns.append(dailyReturn);
+        if (prevClose > 0) {
+            double dailyReturn = (currentClose - prevClose) / prevClose * 100.0;
+            dailyReturns.append(dailyReturn);
+        }
     }
 
-    // Calculer la volatilité moyenne
+    // Calculer le rendement moyen et volatilité
     double sumReturns = 0.0;
     for (double ret : dailyReturns) {
         sumReturns += ret;
     }
-    double avgReturn = sumReturns / dailyReturns.size();
+
+    double avgReturn = dailyReturns.isEmpty() ? 0.0 : sumReturns / dailyReturns.size();
 
     double sumReturnDiff = 0.0;
     for (double ret : dailyReturns) {
         double diff = ret - avgReturn;
         sumReturnDiff += diff * diff;
     }
-    double volatility = sqrt(sumReturnDiff / dailyReturns.size());
+    double volatility = dailyReturns.isEmpty() ? 0.0 : sqrt(sumReturnDiff / dailyReturns.size());
 
     qInfo() << "\n--- Statistiques des données ---";
-    qInfo() << "Période:" << minDate.toString("yyyy-MM-dd") << "à" << maxDate.toString("yyyy-MM-dd");
+    if (minDate.isValid() && maxDate.isValid()) {
+        qInfo() << "Période:" << minDate.toString("yyyy-MM-dd") << "à" << maxDate.toString("yyyy-MM-dd");
+    } else {
+        qInfo() << "Période: Non déterminée (format de date non reconnu)";
+        qInfo() << "Premier exemple de date:" << records[0].date;
+    }
     qInfo() << "Nombre total d'enregistrements:" << records.size();
     qInfo() << "Prix de clôture moyen:" << avgClose;
     qInfo() << "Prix de clôture minimum:" << minClose;
@@ -181,38 +254,6 @@ void calculateStatistics(const QVector<StockRecord>& records) {
     qInfo() << "Volatilité (écart-type des rendements quotidiens):" << volatility << "%";
 }
 
-// Fonction pour exporter les données traitées vers un nouveau fichier CSV
-bool exportToCSV(const QVector<StockRecord>& records, const QString& filePath) {
-    QFile file(filePath);
-
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        qWarning() << "Erreur lors de l'ouverture du fichier pour l'écriture:" << filePath;
-        return false;
-    }
-
-    QTextStream out(&file);
-
-    // Écrire l'en-tête
-    out << "Date,Open,High,Low,Close,Adj Close,Volume,Source File\n";
-
-    // Écrire les données
-    for (const auto& record : records) {
-        out << record.date << ","
-            << record.open << ","
-            << record.high << ","
-            << record.low << ","
-            << record.close << ","
-            << record.adjClose << ","
-            << record.volume << ","
-            << record.sourceFile << "\n";
-    }
-
-    file.close();
-    qInfo() << "Données exportées avec succès vers" << filePath;
-    return true;
-}
-
-// Fonction pour calculer les moyennes mobiles
 QVector<QPair<QString, double>> calculateMovingAverage(const QVector<StockRecord>& records, int period) {
     QVector<QPair<QString, double>> movingAverages;
 
@@ -235,12 +276,44 @@ QVector<QPair<QString, double>> calculateMovingAverage(const QVector<StockRecord
     return movingAverages;
 }
 
+// Fonction pour exporter les données vers un nouveau fichier CSV pas obligatoire ca rne sert pas a grnad chose
+bool exportToCSV(const QVector<StockRecord>& records, const QString& filePath) {
+    QFile file(filePath);
+
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        qWarning() << "Erreur lors de l'ouverture du fichier pour l'écriture:" << filePath;
+        return false;
+    }
+
+    QTextStream out(&file);
+
+    // Écrire l'en-tête
+    out << "Date,Open,High,Low,Close,Adj Close,Volume,Source\n";
+
+    // Écrire les données
+    for (const auto& record : records) {
+        out << record.date << ","
+            << record.open << ","
+            << record.high << ","
+            << record.low << ","
+            << record.close << ","
+            << record.adjClose << ","
+            << record.volume << ","
+            << record.sourceTable << "\n";
+    }
+
+    file.close();
+    qInfo() << "Données exportées avec succès vers" << filePath;
+    return true;
+}
+
 int main(int argc, char *argv[]) {
     QCoreApplication a(argc, argv);
 
-    qInfo() << "Chargement des données des actions Apple...";
+    qInfo() << "Chargement des données des actions Apple depuis la base de données...";
 
-    QVector<StockRecord> records = loadLocalCSVFiles();
+
+    QVector<StockRecord> records = loadFromDatabase();
 
     if (records.isEmpty()) {
         qWarning() << "Aucune donnée chargée.";
@@ -253,31 +326,19 @@ int main(int argc, char *argv[]) {
                   return a.date < b.date;
               });
 
-    // Supprimer les doublons basés sur la date
-    QMap<QString, StockRecord> uniqueRecordsMap;
-    for (const auto& record : records) {
-        uniqueRecordsMap[record.date] = record;
-    }
-
-    QVector<StockRecord> uniqueRecords;
-    for (const auto& record : uniqueRecordsMap) {
-        uniqueRecords.append(record);
-    }
-
     // Afficher les statistiques générales
     qInfo() << "\nAperçu du dataset:";
     qInfo() << "Total des enregistrements:" << records.size();
-    qInfo() << "Après suppression des doublons:" << uniqueRecords.size();
 
     // Trouver la plage de dates
-    QString earliestDate = uniqueRecords.first().date;
-    QString latestDate = uniqueRecords.last().date;
+    QString earliestDate = records.first().date;
+    QString latestDate = records.last().date;
 
     qInfo() << "Plage de dates:" << earliestDate << "à" << latestDate;
 
     // Afficher les 5 premiers enregistrements
     qInfo() << "\nPremiers 5 enregistrements:";
-    qInfo().nospace() << qSetFieldWidth(12)  << "Date"
+    qInfo().nospace() << qSetFieldWidth(20)  << "Date"
                       << qSetFieldWidth(10) << "Open"
                       << qSetFieldWidth(10) << "High"
                       << qSetFieldWidth(10) << "Low"
@@ -285,9 +346,9 @@ int main(int argc, char *argv[]) {
                       << qSetFieldWidth(12) << "Adj Close"
                       << qSetFieldWidth(12) << "Volume";
 
-    for (int i = 0; i < qMin(5, uniqueRecords.size()); ++i) {
-        const auto& record = uniqueRecords[i];
-        qInfo().nospace() << qSetFieldWidth(12) << record.date
+    for (int i = 0; i < qMin(5, records.size()); ++i) {
+        const auto& record = records[i];
+        qInfo().nospace() << qSetFieldWidth(20) << record.date
                           << qSetFieldWidth(10) << record.open
                           << qSetFieldWidth(10) << record.high
                           << qSetFieldWidth(10) << record.low
@@ -296,19 +357,19 @@ int main(int argc, char *argv[]) {
                           << qSetFieldWidth(12) << record.volume;
     }
 
-    // Calculer et afficher des statistiques plus détaillées
-    calculateStatistics(uniqueRecords);
+    // Calculer et afficher des statistiques détaillées
+    displayKeyStatistics(records);
 
     // Calculer les moyennes mobiles sur 50 et 200 jours
-    QVector<QPair<QString, double>> ma50 = calculateMovingAverage(uniqueRecords, 50);
-    QVector<QPair<QString, double>> ma200 = calculateMovingAverage(uniqueRecords, 200);
+    QVector<QPair<QString, double>> ma50 = calculateMovingAverage(records, 50);
+    QVector<QPair<QString, double>> ma200 = calculateMovingAverage(records, 200);
 
     qInfo() << "\n--- Moyennes mobiles ---";
     qInfo() << "Calculé" << ma50.size() << "points de moyenne mobile sur 50 jours";
     qInfo() << "Calculé" << ma200.size() << "points de moyenne mobile sur 200 jours";
 
-    // Exporter les données nettoyées
-    exportToCSV(uniqueRecords, "./build/apple_stock_clean.csv");
+    // Exporter les données
+    exportToCSV(records, "C:/Users/senec/Desktop/datasheet/ml/build/apple_stock_db_export.csv");
 
     // En mode QCoreApplication, l'application ne se termine pas automatiquement
     // On peut donc ajouter une ligne pour la quitter manuellement
