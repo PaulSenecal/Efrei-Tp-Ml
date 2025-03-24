@@ -12,8 +12,6 @@
 
 QVector<StockRecord> StockMarket::loadFromDatabase(const QString& dbPath, const QString& tableName) {
     QVector<StockRecord> records;
-
-    // Vérifier si le fichier de base de données existe
     QFileInfo dbFile(dbPath);
 
     if (!dbFile.exists()) {
@@ -71,7 +69,6 @@ QVector<StockRecord> StockMarket::loadFromDatabase(const QString& dbPath, const 
         }
     }
 
-    // Obtenir les noms des colonnes
     QSqlRecord rec = testQuery.record();
     QStringList columnNames;
 
@@ -81,9 +78,7 @@ QVector<StockRecord> StockMarket::loadFromDatabase(const QString& dbPath, const 
 
     qInfo() << "Noms des colonnes:" << columnNames.join(", ");
 
-    // Requête SQL pour récupérer toutes les données
     QSqlQuery query;
-
     if (!columnNames.isEmpty()) {
         query.prepare("SELECT * FROM " + workingTableName);
     } else {
