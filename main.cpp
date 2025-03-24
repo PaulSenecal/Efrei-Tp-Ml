@@ -309,6 +309,7 @@ int main(int argc, char *argv[]) {
 
     // Exporter les données nettoyées
     exportToCSV(uniqueRecords, "./build/apple_stock_clean.csv");
+    //"C:/Users/senec/Desktop/datasheet/ml/build/apple_stock_clean.csv");
 
     // En mode QCoreApplication, l'application ne se termine pas automatiquement
     // On peut donc ajouter une ligne pour la quitter manuellement
