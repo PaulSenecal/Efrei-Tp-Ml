@@ -8,7 +8,6 @@
 #include <cmath>
 #include <algorithm>
 #include <QSqlDatabase>
-#include <QTextCodec> //
 #include <QSqlQuery>
 #include <QSqlError>
 #include <QSqlRecord>
