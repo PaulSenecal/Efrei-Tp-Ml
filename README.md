@@ -98,4 +98,4 @@ Volatilité (écart-type des rendements quotidiens): 2.45%
 ```
 
 ## Licence
-[Insérer informations de licence ici]
+NEANT
