@@ -333,8 +333,10 @@ int main(int argc, char *argv[]) {
     QVector<QPair<QString, double>> ma200 = calculateMovingAverage(records, 200);
 
     qInfo() << "\n--- Moyennes mobiles ---";
+
     qInfo() << "Calcule" << ma50.size() << "points de moyenne mobile sur 50 jours";
     qInfo() << "Calcule" << ma200.size() << "points de moyenne mobile sur 200 jours";
+
 
     // En mode QCoreApplication, l'application ne se termine pas automatiquement
     // On peut donc ajouter une ligne pour la quitter manuellement
