@@ -8,6 +8,7 @@
 #include <cmath>
 #include <algorithm>
 #include <QSqlDatabase>
+#include <QTextCodec> //
 #include <QSqlQuery>
 #include <QSqlError>
 #include <QSqlRecord>
@@ -34,9 +35,9 @@ QVector<StockRecord> loadFromDatabase() {
     QFileInfo dbFile(dbPath);
 
     if (!dbFile.exists()) {
-        qWarning() << "Fichier de base de données introuvable:" << dbPath;
+        qWarning() << "Fichier de base de donnees introuvable:" << dbPath;
         qWarning() << "Chemin absolu:" << dbFile.absoluteFilePath();
-        qWarning() << "Répertoire courant:" << QDir::currentPath();
+        qWarning() << "Repertoire courant:" << QDir::currentPath();
         return records;
     }
 
@@ -44,14 +45,14 @@ QVector<StockRecord> loadFromDatabase() {
     db.setDatabaseName(dbPath);
 
     if (!db.open()) {
-        qWarning() << "Erreur lors de l'ouverture de la base de données:" << db.lastError().text();
+        qWarning() << "Erreur lors de l'ouverture de la base de donnees:" << db.lastError().text();
         return records;
     }
 
-    qInfo() << "Connexion à la base de données établie.";
+    qInfo() << "Connexion à la base de donnees etablie.";
 
     QStringList tables = db.tables();
-    qInfo() << "Tables disponibles dans la base de données:" << tables.join(", ");
+    qInfo() << "Tables disponibles dans la base de donnees:" << tables.join(", ");
 
 
     QString tableName = "\"AAPL_1980-12-03_2025-03-15\"";
@@ -82,11 +83,11 @@ QVector<StockRecord> loadFromDatabase() {
         testQuery.prepare("SELECT * FROM " + tableName + " LIMIT 1");
 
         if (!testQuery.exec()) {
-            qWarning() << "Deuxième tentative échouée:" << testQuery.lastError().text();
+            qWarning() << "Deuxième tentative echouee:" << testQuery.lastError().text();
             db.close();
             return records;
         } else {
-            qInfo() << "Deuxième tentative réussie avec le nom de table sans guillemets.";
+            qInfo() << "Deuxième tentative reussie avec le nom de table sans guillemets.";
         }
     }
 
@@ -110,7 +111,7 @@ QVector<StockRecord> loadFromDatabase() {
     }
 
     if (!query.exec()) {
-        qWarning() << "Erreur lors de l'exécution de la requête:" << query.lastError().text();
+        qWarning() << "Erreur lors de l'execution de la requete:" << query.lastError().text();
         db.close();
         return records;
     }
@@ -145,7 +146,7 @@ QVector<StockRecord> loadFromDatabase() {
         count++;
     }
 
-    qInfo() << "Chargé" << count << "enregistrements depuis la table" << tableName;
+    qInfo() << "Charge" << count << "enregistrements depuis la table" << tableName;
     db.close();
 
     return records;
@@ -154,7 +155,7 @@ QVector<StockRecord> loadFromDatabase() {
 // Fonction pour calculer et afficher les principales statistiques
 void displayKeyStatistics(const QVector<StockRecord>& records) {
     if (records.isEmpty()) {
-        qWarning() << "Pas de données pour afficher les statistiques";
+        qWarning() << "Pas de donnees pour afficher les statistiques";
         return;
     }
 
@@ -237,28 +238,28 @@ void displayKeyStatistics(const QVector<StockRecord>& records) {
     }
     double volatility = dailyReturns.isEmpty() ? 0.0 : sqrt(sumReturnDiff / dailyReturns.size());
 
-    qInfo() << "\n--- Statistiques des données ---";
+    qInfo() << "\n--- Statistiques des donnees ---";
     if (minDate.isValid() && maxDate.isValid()) {
-        qInfo() << "Période:" << minDate.toString("yyyy-MM-dd") << "à" << maxDate.toString("yyyy-MM-dd");
+        qInfo() << "Periode:" << minDate.toString("yyyy-MM-dd") << "à" << maxDate.toString("yyyy-MM-dd");
     } else {
-        qInfo() << "Période: Non déterminée (format de date non reconnu)";
+        qInfo() << "Periode: Non determinee (format de date non reconnu)";
         qInfo() << "Premier exemple de date:" << records[0].date;
     }
     qInfo() << "Nombre total d'enregistrements:" << records.size();
     qInfo() << "Prix de clôture moyen:" << avgClose;
     qInfo() << "Prix de clôture minimum:" << minClose;
     qInfo() << "Prix de clôture maximum:" << maxClose;
-    qInfo() << "Écart-type des prix de clôture:" << stdDev;
+    qInfo() << "Ecart-type des prix de clôture:" << stdDev;
     qInfo() << "Volume moyen:" << avgVolume;
     qInfo() << "Rendement quotidien moyen:" << avgReturn << "%";
-    qInfo() << "Volatilité (écart-type des rendements quotidiens):" << volatility << "%";
+    qInfo() << "Volatilite (ecart-type des rendements quotidiens):" << volatility << "%";
 }
 
 QVector<QPair<QString, double>> calculateMovingAverage(const QVector<StockRecord>& records, int period) {
     QVector<QPair<QString, double>> movingAverages;
 
     if (records.size() < period) {
-        qWarning() << "Pas assez de données pour calculer la moyenne mobile sur" << period << "jours";
+        qWarning() << "Pas assez de donnees pour calculer la moyenne mobile sur" << period << "jours";
         return movingAverages;
     }
 
@@ -278,7 +279,6 @@ QVector<QPair<QString, double>> calculateMovingAverage(const QVector<StockRecord
 
 int main(int argc, char *argv[]) {
     QCoreApplication a(argc, argv);
-
     qInfo() << "Chargement des données des actions Apple depuis la base de données...";
 
 
@@ -334,8 +334,8 @@ int main(int argc, char *argv[]) {
     QVector<QPair<QString, double>> ma200 = calculateMovingAverage(records, 200);
 
     qInfo() << "\n--- Moyennes mobiles ---";
-    qInfo() << "Calculé" << ma50.size() << "points de moyenne mobile sur 50 jours";
-    qInfo() << "Calculé" << ma200.size() << "points de moyenne mobile sur 200 jours";
+    qInfo() << "Calcule" << ma50.size() << "points de moyenne mobile sur 50 jours";
+    qInfo() << "Calcule" << ma200.size() << "points de moyenne mobile sur 200 jours";
 
     // En mode QCoreApplication, l'application ne se termine pas automatiquement
     // On peut donc ajouter une ligne pour la quitter manuellement

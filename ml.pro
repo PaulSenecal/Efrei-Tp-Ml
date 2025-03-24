@@ -1,4 +1,4 @@
-QT = core sql
+QT = core sql core5compat
 
 CONFIG += c++17 cmdline
 
