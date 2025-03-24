@@ -24,7 +24,7 @@ struct StockRecord {
     QString sourceFile;
 };
 
-// Analyse un fichier CSV et retourne un vecteur de StockRecord
+// Analyse un fichier CSV return vecteur de StockRecord
 QVector<StockRecord> parseCSVFile(const QString& filePath) {
     QVector<StockRecord> records;
     QFile file(filePath);
@@ -36,7 +36,6 @@ QVector<StockRecord> parseCSVFile(const QString& filePath) {
 
     QTextStream in(&file);
 
-    // Ignorer la ligne d'en-tête
     if (!in.atEnd()) {
         in.readLine();
     }
