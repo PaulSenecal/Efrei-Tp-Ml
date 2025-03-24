@@ -35,8 +35,8 @@ Ce programme en C++ utilisant Qt analyse les données historiques des actions Ap
 ## Installation
 1. Clonez ce dépôt:
    ```
-   git clone [[URL_DU_REPO](https://github.com/PaulSenecal/Efrei-Tp-Ml/tree/master)]
-   cd [[NOM_DU_REPO](https://github.com/PaulSenecal/Efrei-Tp-Ml/tree/master)]
+   git clone https://github.com/PaulSenecal/Efrei-Tp-Ml/tree/master
+   cd https://github.com/PaulSenecal/Efrei-Tp-Ml/tree/master
    ```
 
 2. Compilez le projet:
