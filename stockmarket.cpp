@@ -22,7 +22,7 @@ void EvaluationMetrics::calculateMetrics(const QVector<StockRecord>& testData) {
         double error = record.predictedClose - record.close;
         sumSquaredError += error * error;
 
-        // Matrice de confusion (basée sur la direction)
+        // Matrice de confusion
         if (record.predictedDirection && record.actualDirection) {
             truePositives++;
         } else if (!record.predictedDirection && !record.actualDirection) {
@@ -34,14 +34,14 @@ void EvaluationMetrics::calculateMetrics(const QVector<StockRecord>& testData) {
         }
     }
 
-    // Calculer MSE et RMSE
+    // Calculer MSE et RMSE (foncitonnel)
     mse = sumSquaredError / testData.size();
     rmse = std::sqrt(mse);
 
     // Calculer accuracy, precision, recall et F1
     int totalPredictions = truePositives + trueNegatives + falsePositives + falseNegatives;
     accuracy = static_cast<double>(truePositives + trueNegatives) / totalPredictions;
-
+    //(TP + TN) / (TP + TN + FP + FN)(non foncitonnel)
     precision = (truePositives > 0) ?
                     static_cast<double>(truePositives) / (truePositives + falsePositives) : 0;
 
@@ -62,9 +62,9 @@ void EvaluationMetrics::displayMetrics() const {
     qInfo() << "F1 Score:" << f1Score * 100 << "%";
 
     qInfo() << "\n--- Matrice de confusion ---";
-    qInfo() << "               | Hausse prédit | Baisse prédit |";
-    qInfo() << "Hausse réelle  |" << truePositives << " (TP)      |" << falseNegatives << " (FN)      |";
-    qInfo() << "Baisse réelle  |" << falsePositives << " (FP)      |" << trueNegatives << " (TN)      |";
+    qInfo() << "               | Hausse predit | Baisse predit |";
+    qInfo() << "Hausse reelle  |" << truePositives << " (TP)      |" << falseNegatives << " (FN)      |";
+    qInfo() << "Baisse reelle  |" << falsePositives << " (FP)      |" << trueNegatives << " (TN)      |";
 }
 
 // el famoso LinearRegressionModel
@@ -227,11 +227,11 @@ QVector<StockRecord> StockMarketML::loadFromDatabase(const QString& dbPath, cons
 
 void StockMarketML::preprocessData(QVector<StockRecord>& records) {
     if (records.isEmpty()) {
-        qWarning() << "Pas de données à prétraiter";
+        qWarning() << "Pas de donnees à pretraiter";
         return;
     }
 
-    qInfo() << "Prétraitement des données...";
+    qInfo() << "Pretraitement des donnees...";
 
     // rendements quotidiens
     for (int i = 1; i < records.size(); i++) {
@@ -250,7 +250,7 @@ void StockMarketML::preprocessData(QVector<StockRecord>& records) {
     // Calculer la volatilité sur 20 jours
     calculateVolatility(records, 20);
 
-    qInfo() << "Prétraitement terminé";
+    qInfo() << "Pretraitement termine";
 }
 
 void StockMarketML::calculateMovingAveragesForRecords(QVector<StockRecord>& records, int period) {
@@ -276,7 +276,7 @@ void StockMarketML::calculateMovingAveragesForRecords(QVector<StockRecord>& reco
 
 void StockMarketML::calculateVolatility(QVector<StockRecord>& records, int period) {
     if (records.size() < period) {
-        qWarning() << "Pas assez de données pour calculer la volatilité sur" << period << "jours";
+        qWarning() << "Pas assez de donnees pour calculer la volatilite sur" << period << "jours";
         return;
     }
 
@@ -317,7 +317,7 @@ QPair<QVector<StockRecord>, QVector<StockRecord>> StockMarketML::splitTrainTest(
         }
     }
 
-    qInfo() << "Division des données:" << trainData.size() << "enregistrements pour l'entraînement,"
+    qInfo() << "Division des donnees:" << trainData.size() << "enregistrements pour l'entrainement,"
             << testData.size() << "enregistrements pour le test";
 
     return qMakePair(trainData, testData);
@@ -325,7 +325,7 @@ QPair<QVector<StockRecord>, QVector<StockRecord>> StockMarketML::splitTrainTest(
 
 void StockMarketML::evaluateModel(const LinearRegressionModel& model, QVector<StockRecord>& testData) {
     if (testData.isEmpty()) {
-        qWarning() << "Pas de données de test pour l'évaluation";
+        qWarning() << "Pas de donnees de test pour l'evaluation";
         return;
     }
 
@@ -345,13 +345,13 @@ void StockMarketML::evaluateModel(const LinearRegressionModel& model, QVector<St
 }
 
 void StockMarketML::displayTopResults(const QVector<StockRecord>& testResults, int numToShow) {
-    qInfo() << "\n--- Top" << numToShow << "Prédictions ---";
+    qInfo() << "\n--- Top" << numToShow << "Predictions ---";
     qInfo().nospace() << qSetFieldWidth(20) << "Date"
-                      << qSetFieldWidth(10) << "Réel"
-                      << qSetFieldWidth(10) << "Prédit"
+                      << qSetFieldWidth(10) << "Reel"
+                      << qSetFieldWidth(10) << "Predit"
                       << qSetFieldWidth(10) << "Erreur"
-                      << qSetFieldWidth(15) << "Dir. Réelle"
-                      << qSetFieldWidth(15) << "Dir. Prédite";
+                      << qSetFieldWidth(15) << "Dir. Reelle"
+                      << qSetFieldWidth(15) << "Dir. Predite";
 
     int count = qMin(numToShow, testResults.size());
     for (int i = 0; i < count; i++) {

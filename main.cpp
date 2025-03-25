@@ -13,16 +13,13 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    // Trier par date
     std::sort(records.begin(), records.end(),
               [](const StockRecord& a, const StockRecord& b) {
                   return a.date < b.date;
               });
 
-    // Prétraiter les données (calcul des features)
     StockMarketML::preprocessData(records);
 
-    // Diviser les données en ensembles d'entraînement et de test
     auto datasets = StockMarketML::splitTrainTest(records);
     QVector<StockRecord> trainData = datasets.first;
     QVector<StockRecord> testData = datasets.second;
